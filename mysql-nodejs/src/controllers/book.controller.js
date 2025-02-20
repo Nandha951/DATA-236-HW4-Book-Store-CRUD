@@ -4,6 +4,7 @@ exports.createBook = async (req, res) => {
   try {
     const book = await Book.create(req.body);
     res.status(201).json(book);
+    console.log('Book created successfully1');
   } catch (error) {
     res.status(400).json({ message: error.message });
   }
