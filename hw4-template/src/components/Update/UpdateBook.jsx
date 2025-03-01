@@ -1,76 +1,71 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { updateBook } from '../../store/bookSlice';
+import { getBookById } from '../../services/api';
 import './UpdateBook.css';
 
-const UpdateBook = ({ onUpdateBook }) => {
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+const UpdateBook = () => {
+  const [formData, setFormData] = useState({
+    title: '',
+    author: '',
+    isbn: '',
+    publishedYear: ''
+  });
+  
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { id } = useParams();
+  const { loading, error } = useSelector(state => state.books);
+  const [fetchError, setFetchError] = useState(null);
 
   useEffect(() => {
+    const fetchBook = async () => {
+      try {
+        const book = await getBookById(id);
+        setFormData(book);
+      } catch (error) {
+        setFetchError(error.message || 'Failed to fetch book');
+      }
+    };
+
     fetchBook();
   }, [id]);
 
-  const fetchBook = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`http://localhost:3000/api/books/${id}`);
-      if (response.ok) {
-        const book = await response.json();
-        setTitle(book.title);
-        setAuthor(book.author);
-      } else {
-        throw new Error('Book not found');
-      }
-    } catch (error) {
-      setError(error.message);
-      console.error('Error fetching book:', error);
-    } finally {
-      setLoading(false);
-    }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch(`http://localhost:3000/api/books/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ title, author }),
-      });
-
-      if (response.ok) {
-        const updatedBook = await response.json();
-        onUpdateBook && onUpdateBook(updatedBook);
-        navigate('/');
-      } else {
-        throw new Error('Failed to update book');
-      }
-    } catch (error) {
-      setError(error.message);
-      console.error('Error:', error);
+      await dispatch(updateBook({ id, bookData: formData })).unwrap();
+      navigate('/');
+    } catch (err) {
+      console.error('Failed to update book:', err);
     }
   };
 
   if (loading) return <div>Loading...</div>;
-  if (error) return <div className="error-message">{error}</div>;
+  if (fetchError) return <div>Error: {fetchError}</div>;
 
   return (
     <div className="update-book-container">
       <h2>Update Book</h2>
+      {error && <div className="error-message">{error}</div>}
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label htmlFor="title">Book Title:</label>
           <input
             type="text"
             id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            name="title"
+            value={formData.title}
+            onChange={handleChange}
             required
           />
         </div>
@@ -79,14 +74,41 @@ const UpdateBook = ({ onUpdateBook }) => {
           <input
             type="text"
             id="author"
-            value={author}
-            onChange={(e) => setAuthor(e.target.value)}
+            name="author"
+            value={formData.author}
+            onChange={handleChange}
             required
           />
         </div>
+        <div className="form-group">
+          <label htmlFor="isbn">ISBN:</label>
+          <input
+            type="text"
+            id="isbn"
+            name="isbn"
+            value={formData.isbn}
+            onChange={handleChange}
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="publishedYear">Published Year:</label>
+          <input
+            type="number"
+            id="publishedYear"
+            name="publishedYear"
+            value={formData.publishedYear}
+            onChange={handleChange}
+          />
+        </div>
         <div className="button-group">
-          <button type="submit" className="submit-button">Update Book</button>
-          <button type="button" onClick={() => navigate('/')} className="cancel-button">
+          <button type="submit" className="submit-button" disabled={loading}>
+            {loading ? 'Updating...' : 'Update Book'}
+          </button>
+          <button 
+            type="button" 
+            onClick={() => navigate('/')} 
+            className="cancel-button"
+          >
             Cancel
           </button>
         </div>

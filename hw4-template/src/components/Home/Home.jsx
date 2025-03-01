@@ -1,17 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchBooks, deleteBook } from '../../store/bookSlice';
 import './Home.css';
 
 const Home = () => {
-  const [books, setBooks] = useState([]);
+  const dispatch = useDispatch();
+  const { books, loading, error } = useSelector(state => state.books);
 
   useEffect(() => {
-    // Fetch books from API
-    fetch('http://localhost:3000/api/books')
-      .then(response => response.json())
-      .then(data => setBooks(data))
-      .catch(error => console.error('Error:', error));
-  }, []);
+    dispatch(fetchBooks());
+  }, [dispatch]);
+
+  const handleDelete = async (id) => {
+    try {
+      await dispatch(deleteBook(id)).unwrap();
+    } catch (err) {
+      console.error('Failed to delete book:', err);
+    }
+  };
+
+  if (loading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
     <div className="home-container">
@@ -26,7 +36,12 @@ const Home = () => {
             <p>ISBN: {book.isbn}</p>
             <div className="book-actions">
               <Link to={`/update/${book.id}`} className="edit-button">Update</Link>
-              <Link to={`/delete/${book.id}`} className="delete-button">Delete</Link>
+              <button 
+                onClick={() => handleDelete(book.id)} 
+                className="delete-button"
+              >
+                Delete
+              </button>
             </div>
           </div>
         ))}

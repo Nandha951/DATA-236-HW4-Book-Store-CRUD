@@ -1,41 +1,35 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch, useSelector } from 'react-redux';
+import { createBook } from '../../store/bookSlice';
 import './CreateBook.css';
 
-const CreateBook = ({ onAddBook }) => {
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
-  const [isbn, setIsbn] = useState('');
-  const [error, setError] = useState(null);
+const CreateBook = () => {
+  const [formData, setFormData] = useState({
+    title: '',
+    author: '',
+    isbn: '',
+    publishedYear: ''
+  });
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { loading, error } = useSelector(state => state.books);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
-
     try {
-      const response = await fetch('http://localhost:3000/api/books', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ 
-          title, 
-          author,
-          isbn 
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-
-      const newBook = await response.json();
-      onAddBook(newBook);
+      await dispatch(createBook(formData)).unwrap();
       navigate('/');
-    } catch (error) {
-      setError('Failed to create book. Please try again.');
-      console.error('Error:', error);
+    } catch (err) {
+      console.error('Failed to create book:', err);
     }
   };
 
@@ -49,8 +43,9 @@ const CreateBook = ({ onAddBook }) => {
           <input
             type="text"
             id="title"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
+            name="title"
+            value={formData.title}
+            onChange={handleChange}
             required
           />
         </div>
@@ -59,8 +54,9 @@ const CreateBook = ({ onAddBook }) => {
           <input
             type="text"
             id="author"
-            value={author}
-            onChange={(e) => setAuthor(e.target.value)}
+            name="author"
+            value={formData.author}
+            onChange={handleChange}
             required
           />
         </div>
@@ -69,11 +65,24 @@ const CreateBook = ({ onAddBook }) => {
           <input
             type="text"
             id="isbn"
-            value={isbn}
-            onChange={(e) => setIsbn(e.target.value)}
+            name="isbn"
+            value={formData.isbn}
+            onChange={handleChange}
           />
         </div>
-        <button type="submit" className="submit-button">Add Book</button>
+        <div className="form-group">
+          <label htmlFor="publishedYear">Published Year:</label>
+          <input
+            type="number"
+            id="publishedYear"
+            name="publishedYear"
+            value={formData.publishedYear}
+            onChange={handleChange}
+          />
+        </div>
+        <button type="submit" className="submit-button" disabled={loading}>
+          {loading ? 'Adding...' : 'Add Book'}
+        </button>
       </form>
     </div>
   );
